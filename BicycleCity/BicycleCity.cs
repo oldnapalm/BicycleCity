@@ -10,7 +10,7 @@ namespace BicycleCity
     {
         int bikesPercentage;
         bool aggressiveDrivers;
-        int drivingStyle;
+        bool aggressiveCyclists;
         DateTime lastTime;
         string[] availableBicycles = { "BMX", "CRUISER", "FIXTER", "SCORCHER", "TRIBIKE", "TRIBIKE2", "TRIBIKE3" };
         VehicleDrivingFlags customDrivingStyle = VehicleDrivingFlags.AvoidEmptyVehicles |
@@ -26,10 +26,7 @@ namespace BicycleCity
             if (bikesPercentage > 100)
                 bikesPercentage = 100;
             aggressiveDrivers = settings.GetValue("Main", "AggressiveDrivers", false);
-            if (aggressiveDrivers)
-                drivingStyle = (int)customDrivingStyle;
-            else
-                drivingStyle = (int)DrivingStyle.Normal;
+            aggressiveCyclists = settings.GetValue("Main", "AggressiveCyclists", false);
             lastTime = DateTime.UtcNow;
             Tick += OnTick;
         }
@@ -52,7 +49,7 @@ namespace BicycleCity
                     {
                         canChange.Add(vehicle);
                         if (aggressiveDrivers)
-                            Function.Call(Hash.SET_DRIVE_TASK_DRIVING_STYLE, vehicle.Driver, drivingStyle);
+                            Function.Call(Hash.SET_DRIVE_TASK_DRIVING_STYLE, vehicle.Driver, (int)customDrivingStyle);
                     }
                 }
                 int toChange = (bicycles + canChange.Count) * bikesPercentage / 100 - bicycles;
@@ -77,7 +74,8 @@ namespace BicycleCity
                         newVehicle.MaxSpeed = 10;
                         canChange[i].Delete();
                         driver.SetIntoVehicle(newVehicle, VehicleSeat.Driver);
-                        Function.Call(Hash.TASK_VEHICLE_DRIVE_WANDER, driver, newVehicle, (float)random.Next(4, 8), drivingStyle);
+                        Function.Call(Hash.TASK_VEHICLE_DRIVE_WANDER, driver, newVehicle, (float)random.Next(4, 8),
+                                      aggressiveCyclists ? (int)customDrivingStyle : (int)DrivingStyle.Normal);
                         Function.Call(Hash.SET_PED_KEEP_TASK, driver, true);
                         driver.MarkAsNoLongerNeeded();
                         newVehicle.MarkAsNoLongerNeeded();
