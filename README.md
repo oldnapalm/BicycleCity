@@ -8,6 +8,7 @@ Replace cars by bikes (GTA V mod)
   - Change `BikesPercentage` if you want more or less cars replaced by bikes
   - Set `AggressiveDrivers` to `true` if you want drivers to overtake slower vehicles
   - Set `AggressiveCyclists` to `true` if you want cyclists to overtake slower vehicles
+  - Set `CyclistsBreakLaws` to `true` if you want cyclists to break traffic laws
 
 ## Download
 https://github.com/oldnapalm/BicycleCity/releases/latest

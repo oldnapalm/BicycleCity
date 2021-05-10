@@ -11,13 +11,19 @@ namespace BicycleCity
         int bikesPercentage;
         bool aggressiveDrivers;
         bool aggressiveCyclists;
+        bool cyclistsBreakLaws;
         DateTime lastTime;
         string[] availableBicycles = { "BMX", "CRUISER", "FIXTER", "SCORCHER", "TRIBIKE", "TRIBIKE2", "TRIBIKE3" };
-        VehicleDrivingFlags customDrivingStyle = VehicleDrivingFlags.AvoidEmptyVehicles |
-                                                 VehicleDrivingFlags.AvoidObjects |
-                                                 VehicleDrivingFlags.AvoidPeds |
-                                                 VehicleDrivingFlags.AvoidVehicles |
-                                                 VehicleDrivingFlags.StopAtTrafficLights;
+        VehicleDrivingFlags aggressiveDrivingStyle = VehicleDrivingFlags.AvoidEmptyVehicles |
+                                                     VehicleDrivingFlags.AvoidObjects |
+                                                     VehicleDrivingFlags.AvoidPeds |
+                                                     VehicleDrivingFlags.AvoidVehicles |
+                                                     VehicleDrivingFlags.StopAtTrafficLights;
+        VehicleDrivingFlags lawBreakerDrivingStyle = VehicleDrivingFlags.AllowGoingWrongWay |
+                                                     VehicleDrivingFlags.AllowMedianCrossing |
+                                                     VehicleDrivingFlags.AvoidEmptyVehicles |
+                                                     VehicleDrivingFlags.AvoidObjects |
+                                                     VehicleDrivingFlags.AvoidVehicles;
 
         public BicycleCity()
         {
@@ -27,6 +33,7 @@ namespace BicycleCity
                 bikesPercentage = 100;
             aggressiveDrivers = settings.GetValue("Main", "AggressiveDrivers", false);
             aggressiveCyclists = settings.GetValue("Main", "AggressiveCyclists", false);
+            cyclistsBreakLaws = settings.GetValue("Main", "CyclistsBreakLaws", false);
             lastTime = DateTime.UtcNow;
             Tick += OnTick;
         }
@@ -40,16 +47,17 @@ namespace BicycleCity
                 int bicycles = 0;
                 foreach (Vehicle vehicle in allVehicles)
                 {
-                    if (vehicle.Model.IsBicycle && vehicle.Driver != null && !vehicle.Driver.IsPlayer)
+                    if (vehicle.Driver == null || vehicle.Driver.IsPlayer)
+                        continue;
+                    if (vehicle.Model.IsBicycle)
                         bicycles++;
                     else if (!vehicle.Model.IsTrain && !vehicle.Model.IsBoat &&
                              !vehicle.Model.IsHelicopter && !vehicle.Model.IsPlane &&
-                             !Function.Call<bool>(Hash.IS_ENTITY_A_MISSION_ENTITY, vehicle) &&
-                             vehicle.Driver != null && !vehicle.Driver.IsPlayer)
+                             !Function.Call<bool>(Hash.IS_ENTITY_A_MISSION_ENTITY, vehicle))
                     {
                         canChange.Add(vehicle);
                         if (aggressiveDrivers)
-                            Function.Call(Hash.SET_DRIVE_TASK_DRIVING_STYLE, vehicle.Driver, (int)customDrivingStyle);
+                            Function.Call(Hash.SET_DRIVE_TASK_DRIVING_STYLE, vehicle.Driver, (int)aggressiveDrivingStyle);
                     }
                 }
                 int toChange = (bicycles + canChange.Count) * bikesPercentage / 100 - bicycles;
@@ -74,8 +82,14 @@ namespace BicycleCity
                         newVehicle.MaxSpeed = 10;
                         canChange[i].Delete();
                         driver.SetIntoVehicle(newVehicle, VehicleSeat.Driver);
-                        Function.Call(Hash.TASK_VEHICLE_DRIVE_WANDER, driver, newVehicle, (float)random.Next(4, 8),
-                                      aggressiveCyclists ? (int)customDrivingStyle : (int)DrivingStyle.Normal);
+                        int drivingStyle;
+                        if (cyclistsBreakLaws)
+                            drivingStyle = (int)lawBreakerDrivingStyle;
+                        else if (aggressiveCyclists)
+                            drivingStyle = (int)aggressiveDrivingStyle;
+                        else
+                            drivingStyle = (int)DrivingStyle.Normal;
+                        Function.Call(Hash.TASK_VEHICLE_DRIVE_WANDER, driver, newVehicle, (float)random.Next(4, 8), drivingStyle);
                         Function.Call(Hash.SET_PED_KEEP_TASK, driver, true);
                         driver.MarkAsNoLongerNeeded();
                         newVehicle.MarkAsNoLongerNeeded();
