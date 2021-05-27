@@ -66,6 +66,8 @@ namespace BicycleCity
                     Ped driver = canChange[i].Driver;
                     if (driver == null)
                         continue;
+                    if (canChange[i].IsInRange(Game.Player.Character.Position, 100f) && canChange[i].IsOnScreen)
+                        continue;
                     Function.Call(Hash.SET_ENTITY_AS_MISSION_ENTITY, driver, true, true);
                     driver.AlwaysKeepTask = false;
                     Model newModel;
