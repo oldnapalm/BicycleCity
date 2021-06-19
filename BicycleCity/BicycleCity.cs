@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using GTA;
+using GTA.Math;
 using GTA.Native;
 
 namespace BicycleCity
@@ -12,7 +14,12 @@ namespace BicycleCity
         bool aggressiveDrivers;
         bool aggressiveCyclists;
         bool cyclistsBreakLaws;
-        DateTime lastTime;
+        bool cheeringCrowds;
+        int cheeringCrowdsSlope;
+        bool stopPedAttacks;
+        DateTime lastTime = DateTime.UtcNow;
+        DateTime lastPaparazzi = DateTime.UtcNow;
+        List<Ped> fans = new List<Ped>();
         string[] availableBicycles = { "BMX", "CRUISER", "FIXTER", "SCORCHER", "TRIBIKE", "TRIBIKE2", "TRIBIKE3" };
         VehicleDrivingFlags aggressiveDrivingStyle = VehicleDrivingFlags.AvoidEmptyVehicles |
                                                      VehicleDrivingFlags.AvoidObjects |
@@ -29,23 +36,25 @@ namespace BicycleCity
         {
             ScriptSettings settings = ScriptSettings.Load(@".\Scripts\BicycleCity.ini");
             bikesPercentage = settings.GetValue("Main", "BikesPercentage", 50);
-            if (bikesPercentage > 100)
-                bikesPercentage = 100;
+            if (bikesPercentage < 0) bikesPercentage = 0;
+            if (bikesPercentage > 100) bikesPercentage = 100;
             aggressiveDrivers = settings.GetValue("Main", "AggressiveDrivers", false);
             aggressiveCyclists = settings.GetValue("Main", "AggressiveCyclists", false);
             cyclistsBreakLaws = settings.GetValue("Main", "CyclistsBreakLaws", false);
-            lastTime = DateTime.UtcNow;
+            cheeringCrowds = settings.GetValue("Main", "CheeringCrowds", true);
+            cheeringCrowdsSlope = settings.GetValue("Main", "CheeringCrowdsSlope", 8);
+            stopPedAttacks = settings.GetValue("Main", "StopPedAttacks", false);
             Tick += OnTick;
+            Aborted += OnAbort;
         }
 
         void OnTick(object sender, EventArgs e)
         {
             if (DateTime.UtcNow >= lastTime.AddSeconds(1))
             {
-                Vehicle[] allVehicles = World.GetAllVehicles();
                 List<Vehicle> canChange = new List<Vehicle>();
                 int bicycles = 0;
-                foreach (Vehicle vehicle in allVehicles)
+                foreach (Vehicle vehicle in World.GetAllVehicles())
                 {
                     if (vehicle.Driver == null || vehicle.Driver.IsPlayer)
                         continue;
@@ -60,6 +69,7 @@ namespace BicycleCity
                             Function.Call(Hash.SET_DRIVE_TASK_DRIVING_STYLE, vehicle.Driver, (int)aggressiveDrivingStyle);
                     }
                 }
+                Random random = new Random();
                 int toChange = (bicycles + canChange.Count) * bikesPercentage / 100 - bicycles;
                 for (int i = 0; i < toChange; i++)
                 {
@@ -71,7 +81,6 @@ namespace BicycleCity
                     Function.Call(Hash.SET_ENTITY_AS_MISSION_ENTITY, driver, true, true);
                     driver.AlwaysKeepTask = false;
                     Model newModel;
-                    Random random = new Random();
                     newModel = new Model(availableBicycles[random.Next(availableBicycles.Length)]);
                     newModel.Request();
                     if (newModel.IsInCdImage && newModel.IsValid)
@@ -98,8 +107,102 @@ namespace BicycleCity
                     }
                 }
                 canChange.Clear();
+
+                if (cheeringCrowds)
+                {
+                    Vector3 point1 = Game.Player.Character.Position;
+                    Vector3 point2 = Game.Player.Character.Position + Game.Player.Character.ForwardVector * 2f;
+                    float slope = (World.GetGroundHeight(point2) - World.GetGroundHeight(point1)) / 2f;
+
+                    if (slope > cheeringCrowdsSlope / 100f && fans.Count < 100)
+                    {
+                        NativeVector3 spawnPoint;
+                        point2 = Game.Player.Character.ForwardVector;
+                        unsafe
+                        {
+                            Function.Call(Hash.FIND_SPAWN_POINT_IN_DIRECTION, point1.X, point1.Y, point1.Z, point2.X, point2.Y, point2.Z, 100f, &spawnPoint);
+                        }
+                        var position = World.GetNextPositionOnSidewalk(spawnPoint);
+
+                        if (DateTime.UtcNow >= lastPaparazzi.AddSeconds(10))
+                        {
+                            Model pModel;
+                            pModel = new Model("a_m_m_paparazzi_01");
+                            pModel.Request();
+                            if (pModel.IsInCdImage && pModel.IsValid)
+                            {
+                                while (!pModel.IsLoaded)
+                                    Wait(10);
+                                Ped paparazzi = World.CreatePed(pModel, position);
+                                pModel.MarkAsNoLongerNeeded();
+                                paparazzi.Task.StartScenario("WORLD_HUMAN_PAPARAZZI", 0f);
+                                fans.Add(paparazzi);
+                            }
+                            lastPaparazzi = DateTime.UtcNow;
+                        }
+                        else
+                        {
+                            Ped fan = World.CreateRandomPed(position);
+                            fan.Task.StartScenario("WORLD_HUMAN_CHEERING", 0f);
+                            fans.Add(fan);
+                        }
+                    }
+
+                    foreach (Ped fan in fans.ToArray())
+                    {
+                        if (fan != null)
+                        {
+                            if (fan.Position.DistanceTo(Game.Player.Character.Position) > 150f)
+                            {
+                                fan.Delete();
+                                fans.Remove(fan);
+                            }
+                        }
+                        else
+                            fans.Remove(fan);
+                    }
+                }
+
+                if (stopPedAttacks)
+                    foreach (Ped ped in World.GetNearbyPeds(Game.Player.Character, 100f))
+                        if ((ped.GetRelationshipWithPed(Game.Player.Character) == Relationship.Hate && ped.IsHuman) ||
+                            ped.IsInCombat || ped.IsInMeleeCombat || ped.IsShooting)
+                        {
+                            ped.Delete();
+                        }
+
                 lastTime = DateTime.UtcNow;
             }
+
+            if (cheeringCrowds)
+                foreach (Ped fan in fans)
+                    if (fan != null && !fan.IsRunning)
+                        fan.Heading = (Game.Player.Character.Position - fan.Position).ToHeading();
         }
+
+        void OnAbort(object sender, EventArgs e)
+        {
+            Tick -= OnTick;
+
+            if (cheeringCrowds)
+            {
+                foreach (Ped fan in fans)
+                    fan.Delete();
+                fans.Clear();
+            }
+        }
+    }
+
+    [StructLayout(LayoutKind.Explicit, Size = 0x18)]
+    internal struct NativeVector3
+    {
+        [FieldOffset(0x00)]
+        internal float X;
+        [FieldOffset(0x08)]
+        internal float Y;
+        [FieldOffset(0x10)]
+        internal float Z;
+
+        public static implicit operator Vector3(NativeVector3 value) => new Vector3(value.X, value.Y, value.Z);
     }
 }
