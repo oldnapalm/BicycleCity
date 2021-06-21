@@ -21,6 +21,12 @@ namespace BicycleCity
         DateTime lastPaparazzi = DateTime.UtcNow;
         List<Ped> fans = new List<Ped>();
         string[] availableBicycles = { "BMX", "CRUISER", "FIXTER", "SCORCHER", "TRIBIKE", "TRIBIKE2", "TRIBIKE3" };
+        string[] availableVoices = { "A_F_M_BEVHILLS_02_WHITE_FULL_02",
+                                     "A_F_M_SALTON_01_WHITE_FULL_01",
+                                     "A_F_M_SALTON_01_WHITE_FULL_02",
+                                     "A_F_M_SALTON_01_WHITE_FULL_03",
+                                     "A_F_M_SALTON_01_WHITE_MINI_02",
+                                     "A_F_M_SALTON_01_WHITE_MINI_03" };
         VehicleDrivingFlags aggressiveDrivingStyle = VehicleDrivingFlags.AvoidEmptyVehicles |
                                                      VehicleDrivingFlags.AvoidObjects |
                                                      VehicleDrivingFlags.AvoidPeds |
@@ -152,7 +158,10 @@ namespace BicycleCity
                     {
                         if (fan != null)
                         {
-                            if (fan.Position.DistanceTo(Game.Player.Character.Position) > 150f)
+                            var distance = fan.Position.DistanceTo(Game.Player.Character.Position);
+                            if (distance < 20f)
+                                fan.PlayAmbientSpeech("GENERIC_CHEER", availableVoices[random.Next(availableVoices.Length)], SpeechModifier.ForceShouted);
+                            else if (distance > 150f)
                             {
                                 fan.Delete();
                                 fans.Remove(fan);
