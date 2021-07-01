@@ -152,7 +152,7 @@ namespace BicycleCity
                     {
                         if (fan != null)
                         {
-                            if (fan.Position.DistanceTo(Game.Player.Character.Position) > 150f)
+                            if (fan.Position.DistanceTo(Game.Player.Character.Position) > 150f || isEnemy(fan))
                             {
                                 fan.Delete();
                                 fans.Remove(fan);
@@ -165,11 +165,8 @@ namespace BicycleCity
 
                 if (stopPedAttacks)
                     foreach (Ped ped in World.GetNearbyPeds(Game.Player.Character, 100f))
-                        if ((ped.GetRelationshipWithPed(Game.Player.Character) == Relationship.Hate && ped.IsHuman) ||
-                            ped.IsInCombat || ped.IsInMeleeCombat || ped.IsShooting)
-                        {
+                        if (isEnemy(ped))
                             ped.Delete();
-                        }
 
                 lastTime = DateTime.UtcNow;
             }
@@ -178,6 +175,11 @@ namespace BicycleCity
                 foreach (Ped fan in fans)
                     if (fan != null && !fan.IsRunning)
                         fan.Heading = (Game.Player.Character.Position - fan.Position).ToHeading();
+        }
+
+        bool isEnemy(Ped ped)
+        {
+            return (ped.GetRelationshipWithPed(Game.Player.Character) == Relationship.Hate && ped.IsHuman) || ped.IsInCombat || ped.IsInMeleeCombat || ped.IsShooting;
         }
 
         void OnAbort(object sender, EventArgs e)
