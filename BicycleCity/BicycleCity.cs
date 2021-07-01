@@ -114,7 +114,7 @@ namespace BicycleCity
                     Vector3 point2 = Game.Player.Character.Position + Game.Player.Character.ForwardVector * 2f;
                     float slope = (World.GetGroundHeight(point2) - World.GetGroundHeight(point1)) / 2f;
 
-                    if (slope > cheeringCrowdsSlope / 100f && fans.Count < 100)
+                    if (slope > cheeringCrowdsSlope / 100f && fans.Count < 100 && Game.Player.Character.CurrentVehicle?.Speed > 0)
                     {
                         NativeVector3 spawnPoint;
                         point2 = Game.Player.Character.ForwardVector;
