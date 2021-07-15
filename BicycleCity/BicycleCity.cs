@@ -17,8 +17,8 @@ namespace BicycleCity
         bool cheeringCrowds;
         int cheeringCrowdsSlope;
         bool stopPedAttacks;
-        DateTime lastTime = DateTime.UtcNow;
-        DateTime lastPaparazzi = DateTime.UtcNow;
+        int lastTime = Environment.TickCount;
+        int lastPaparazzi = Environment.TickCount;
         List<Ped> fans = new List<Ped>();
         string[] availableBicycles = { "BMX", "CRUISER", "FIXTER", "SCORCHER", "TRIBIKE", "TRIBIKE2", "TRIBIKE3" };
         VehicleDrivingFlags aggressiveDrivingStyle = VehicleDrivingFlags.AvoidEmptyVehicles |
@@ -50,7 +50,7 @@ namespace BicycleCity
 
         void OnTick(object sender, EventArgs e)
         {
-            if (DateTime.UtcNow >= lastTime.AddSeconds(1))
+            if (Environment.TickCount >= lastTime + 1000)
             {
                 List<Vehicle> canChange = new List<Vehicle>();
                 int bicycles = 0;
@@ -124,7 +124,7 @@ namespace BicycleCity
                         }
                         var position = World.GetNextPositionOnSidewalk(spawnPoint);
 
-                        if (DateTime.UtcNow >= lastPaparazzi.AddSeconds(10))
+                        if (Environment.TickCount >= lastPaparazzi + 10000)
                         {
                             Model pModel;
                             pModel = new Model("a_m_m_paparazzi_01");
@@ -138,7 +138,7 @@ namespace BicycleCity
                                 paparazzi.Task.StartScenario("WORLD_HUMAN_PAPARAZZI", 0f);
                                 fans.Add(paparazzi);
                             }
-                            lastPaparazzi = DateTime.UtcNow;
+                            lastPaparazzi = Environment.TickCount;
                         }
                         else
                         {
@@ -168,7 +168,7 @@ namespace BicycleCity
                         if (isEnemy(ped))
                             ped.Delete();
 
-                lastTime = DateTime.UtcNow;
+                lastTime = Environment.TickCount;
             }
 
             if (cheeringCrowds)
