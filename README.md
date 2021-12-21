@@ -12,6 +12,7 @@ Replace cars by bikes (GTA V mod)
   - **CheeringCrowds** - cheering peds will be spawned on climbs
   - **CheeringCrowdsSlope** - minimum slope for cheering crowds
   - **StopPedAttacks** - attacking peds will be removed
+  - **CantFallFromBike** - player can't be knocked off the bike
 
 ## Download
 https://github.com/oldnapalm/BicycleCity/releases/latest

@@ -10,32 +10,33 @@ namespace BicycleCity
 {
     public class BicycleCity : Script
     {
-        int bikesPercentage;
-        bool aggressiveDrivers;
-        bool aggressiveCyclists;
-        bool cyclistsBreakLaws;
-        bool cheeringCrowds;
-        int cheeringCrowdsSlope;
-        bool stopPedAttacks;
-        int lastTime = Environment.TickCount;
-        int lastPaparazzi = Environment.TickCount;
-        List<Ped> fans = new List<Ped>();
-        string[] availableBicycles = { "BMX", "CRUISER", "FIXTER", "SCORCHER", "TRIBIKE", "TRIBIKE2", "TRIBIKE3" };
-        VehicleDrivingFlags aggressiveDrivingStyle = VehicleDrivingFlags.AvoidEmptyVehicles |
-                                                     VehicleDrivingFlags.AvoidObjects |
-                                                     VehicleDrivingFlags.AvoidPeds |
-                                                     VehicleDrivingFlags.AvoidVehicles |
-                                                     VehicleDrivingFlags.StopAtTrafficLights;
-        VehicleDrivingFlags lawBreakerDrivingStyle = VehicleDrivingFlags.AllowGoingWrongWay |
-                                                     VehicleDrivingFlags.AllowMedianCrossing |
-                                                     VehicleDrivingFlags.AvoidEmptyVehicles |
-                                                     VehicleDrivingFlags.AvoidObjects |
-                                                     VehicleDrivingFlags.AvoidVehicles;
+        private readonly int bikesPercentage;
+        private readonly bool aggressiveDrivers;
+        private readonly bool aggressiveCyclists;
+        private readonly bool cyclistsBreakLaws;
+        private readonly bool cheeringCrowds;
+        private readonly int cheeringCrowdsSlope;
+        private readonly bool stopPedAttacks;
+        private readonly bool cantFallFromBike;
+        private int lastTime = Environment.TickCount;
+        private int lastPaparazzi = Environment.TickCount;
+        private readonly List<Ped> fans = new List<Ped>();
+        private readonly string[] availableBicycles = { "BMX", "CRUISER", "FIXTER", "SCORCHER", "TRIBIKE", "TRIBIKE2", "TRIBIKE3" };
+        private readonly VehicleDrivingFlags aggressiveDrivingStyle = VehicleDrivingFlags.AvoidEmptyVehicles |
+                                                                      VehicleDrivingFlags.AvoidObjects |
+                                                                      VehicleDrivingFlags.AvoidPeds |
+                                                                      VehicleDrivingFlags.AvoidVehicles |
+                                                                      VehicleDrivingFlags.StopAtTrafficLights;
+        private readonly VehicleDrivingFlags lawBreakerDrivingStyle = VehicleDrivingFlags.AllowGoingWrongWay |
+                                                                      VehicleDrivingFlags.AllowMedianCrossing |
+                                                                      VehicleDrivingFlags.AvoidEmptyVehicles |
+                                                                      VehicleDrivingFlags.AvoidObjects |
+                                                                      VehicleDrivingFlags.AvoidVehicles;
 
         public BicycleCity()
         {
             ScriptSettings settings = ScriptSettings.Load(@".\Scripts\BicycleCity.ini");
-            bikesPercentage = settings.GetValue("Main", "BikesPercentage", 50);
+            bikesPercentage = settings.GetValue("Main", "BikesPercentage", 0);
             if (bikesPercentage < 0) bikesPercentage = 0;
             if (bikesPercentage > 100) bikesPercentage = 100;
             aggressiveDrivers = settings.GetValue("Main", "AggressiveDrivers", false);
@@ -44,11 +45,12 @@ namespace BicycleCity
             cheeringCrowds = settings.GetValue("Main", "CheeringCrowds", true);
             cheeringCrowdsSlope = settings.GetValue("Main", "CheeringCrowdsSlope", 8);
             stopPedAttacks = settings.GetValue("Main", "StopPedAttacks", false);
+            cantFallFromBike = settings.GetValue("Main", "CantFallFromBike", true);
             Tick += OnTick;
             Aborted += OnAbort;
         }
 
-        void OnTick(object sender, EventArgs e)
+        private void OnTick(object sender, EventArgs e)
         {
             if (Environment.TickCount >= lastTime + 1000)
             {
@@ -152,7 +154,7 @@ namespace BicycleCity
                     {
                         if (fan != null)
                         {
-                            if (fan.Position.DistanceTo(Game.Player.Character.Position) > 150f || isEnemy(fan))
+                            if (fan.Position.DistanceTo(Game.Player.Character.Position) > 150f || IsEnemy(fan))
                             {
                                 fan.Delete();
                                 fans.Remove(fan);
@@ -165,7 +167,7 @@ namespace BicycleCity
 
                 if (stopPedAttacks)
                     foreach (Ped ped in World.GetNearbyPeds(Game.Player.Character, 100f))
-                        if (isEnemy(ped))
+                        if (IsEnemy(ped))
                             ped.Delete();
 
                 lastTime = Environment.TickCount;
@@ -175,14 +177,17 @@ namespace BicycleCity
                 foreach (Ped fan in fans)
                     if (fan != null && !fan.IsRunning)
                         fan.Heading = (Game.Player.Character.Position - fan.Position).ToHeading();
+
+            if (cantFallFromBike)
+                Function.Call(Hash.SET_PED_CAN_BE_KNOCKED_OFF_VEHICLE, Game.Player.Character, 1);
         }
 
-        bool isEnemy(Ped ped)
+        private bool IsEnemy(Ped ped)
         {
             return (ped.GetRelationshipWithPed(Game.Player.Character) == Relationship.Hate && ped.IsHuman) || ped.IsInCombat || ped.IsInMeleeCombat || ped.IsShooting;
         }
 
-        void OnAbort(object sender, EventArgs e)
+        private void OnAbort(object sender, EventArgs e)
         {
             Tick -= OnTick;
 
