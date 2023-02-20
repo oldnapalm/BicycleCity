@@ -22,16 +22,16 @@ namespace BicycleCity
         private int lastPaparazzi = Environment.TickCount;
         private readonly List<Ped> fans = new List<Ped>();
         private readonly string[] availableBicycles = { "BMX", "CRUISER", "FIXTER", "SCORCHER", "TRIBIKE", "TRIBIKE2", "TRIBIKE3" };
-        private readonly VehicleDrivingFlags aggressiveDrivingStyle = VehicleDrivingFlags.AvoidEmptyVehicles |
-                                                                      VehicleDrivingFlags.AvoidObjects |
-                                                                      VehicleDrivingFlags.AvoidPeds |
-                                                                      VehicleDrivingFlags.AvoidVehicles |
+        private readonly VehicleDrivingFlags aggressiveDrivingStyle = VehicleDrivingFlags.SteerAroundStationaryVehicles |
+                                                                      VehicleDrivingFlags.SteerAroundObjects |
+                                                                      VehicleDrivingFlags.SteerAroundPeds |
+                                                                      VehicleDrivingFlags.SwerveAroundAllVehicles |
                                                                       VehicleDrivingFlags.StopAtTrafficLights;
         private readonly VehicleDrivingFlags lawBreakerDrivingStyle = VehicleDrivingFlags.AllowGoingWrongWay |
-                                                                      VehicleDrivingFlags.AllowMedianCrossing |
-                                                                      VehicleDrivingFlags.AvoidEmptyVehicles |
-                                                                      VehicleDrivingFlags.AvoidObjects |
-                                                                      VehicleDrivingFlags.AvoidVehicles;
+                                                                      VehicleDrivingFlags.UseShortCutLinks |
+                                                                      VehicleDrivingFlags.SteerAroundStationaryVehicles |
+                                                                      VehicleDrivingFlags.SteerAroundObjects |
+                                                                      VehicleDrivingFlags.SwerveAroundAllVehicles;
 
         public BicycleCity()
         {
