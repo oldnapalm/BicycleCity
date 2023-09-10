@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Runtime.InteropServices;
 using GTA;
 using GTA.Math;
@@ -58,16 +59,17 @@ namespace BicycleCity
                 int bicycles = 0;
                 foreach (Vehicle vehicle in World.GetAllVehicles())
                 {
-                    if (vehicle.Driver == null || vehicle.Driver.IsPlayer)
+                    if (vehicle.Driver != null && vehicle.Driver.IsPlayer)
                         continue;
                     if (vehicle.Model.IsBicycle)
                         bicycles++;
                     else if (!vehicle.Model.IsTrain && !vehicle.Model.IsBoat &&
                              !vehicle.Model.IsHelicopter && !vehicle.Model.IsPlane &&
-                             !Function.Call<bool>(Hash.IS_ENTITY_A_MISSION_ENTITY, vehicle))
+                             !Function.Call<bool>(Hash.IS_ENTITY_A_MISSION_ENTITY, vehicle) &&
+                             !World.GetNearbyVehicles(vehicle.Position, 2f).ToList().Any(x => x.Model.IsBicycle))
                     {
                         canChange.Add(vehicle);
-                        if (aggressiveDrivers)
+                        if (aggressiveDrivers && vehicle.Driver != null)
                             Function.Call(Hash.SET_DRIVE_TASK_DRIVING_STYLE, vehicle.Driver, (int)aggressiveDrivingStyle);
                     }
                 }
@@ -76,12 +78,13 @@ namespace BicycleCity
                 for (int i = 0; i < toChange; i++)
                 {
                     Ped driver = canChange[i].Driver;
-                    if (driver == null)
-                        continue;
                     if (canChange[i].IsInRange(Game.Player.Character.Position, 100f) && canChange[i].IsOnScreen)
                         continue;
-                    Function.Call(Hash.SET_ENTITY_AS_MISSION_ENTITY, driver, true, true);
-                    driver.AlwaysKeepTask = false;
+					if (driver != null)
+					{
+						Function.Call(Hash.SET_ENTITY_AS_MISSION_ENTITY, driver, true, true);
+						driver.AlwaysKeepTask = false;
+					}
                     Model newModel;
                     newModel = new Model(availableBicycles[random.Next(availableBicycles.Length)]);
                     newModel.Request();
@@ -94,17 +97,20 @@ namespace BicycleCity
                         newVehicle.Mods.CustomPrimaryColor = Color.FromArgb(random.Next(255), random.Next(255), random.Next(255));
                         newVehicle.MaxSpeed = 10;
                         canChange[i].Delete();
-                        driver.SetIntoVehicle(newVehicle, VehicleSeat.Driver);
-                        int drivingStyle;
-                        if (cyclistsBreakLaws)
-                            drivingStyle = (int)lawBreakerDrivingStyle;
-                        else if (aggressiveCyclists)
-                            drivingStyle = (int)aggressiveDrivingStyle;
-                        else
-                            drivingStyle = (int)DrivingStyle.Normal;
-                        Function.Call(Hash.TASK_VEHICLE_DRIVE_WANDER, driver, newVehicle, (float)random.Next(4, 8), drivingStyle);
-                        Function.Call(Hash.SET_PED_KEEP_TASK, driver, true);
-                        driver.MarkAsNoLongerNeeded();
+                        if (driver != null)
+						{
+							driver.SetIntoVehicle(newVehicle, VehicleSeat.Driver);
+							int drivingStyle;
+							if (cyclistsBreakLaws)
+								drivingStyle = (int)lawBreakerDrivingStyle;
+							else if (aggressiveCyclists)
+								drivingStyle = (int)aggressiveDrivingStyle;
+							else
+								drivingStyle = (int)DrivingStyle.Normal;
+							Function.Call(Hash.TASK_VEHICLE_DRIVE_WANDER, driver, newVehicle, (float)random.Next(4, 8), drivingStyle);
+							Function.Call(Hash.SET_PED_KEEP_TASK, driver, true);
+							driver.MarkAsNoLongerNeeded();
+						}
                         newVehicle.MarkAsNoLongerNeeded();
                     }
                 }
