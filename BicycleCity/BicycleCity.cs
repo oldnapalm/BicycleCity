@@ -130,29 +130,36 @@ namespace BicycleCity
                         {
                             Function.Call(Hash.FIND_SPAWN_POINT_IN_DIRECTION, point1.X, point1.Y, point1.Z, point2.X, point2.Y, point2.Z, 100f, &spawnPoint);
                         }
-                        var position = World.GetNextPositionOnSidewalk(spawnPoint);
-
-                        if (Environment.TickCount >= lastPaparazzi + 10000)
+                        bool result;
+                        NativeVector3 position;
+                        unsafe
                         {
-                            Model pModel;
-                            pModel = new Model("a_m_m_paparazzi_01");
-                            pModel.Request();
-                            if (pModel.IsInCdImage && pModel.IsValid)
-                            {
-                                while (!pModel.IsLoaded)
-                                    Wait(10);
-                                Ped paparazzi = World.CreatePed(pModel, position);
-                                pModel.MarkAsNoLongerNeeded();
-                                paparazzi.Task.StartScenario("WORLD_HUMAN_PAPARAZZI", 0f);
-                                fans.Add(paparazzi);
-                            }
-                            lastPaparazzi = Environment.TickCount;
+                            result = Function.Call<bool>(Hash.GET_POSITION_BY_SIDE_OF_ROAD, spawnPoint.X, spawnPoint.Y, spawnPoint.Z, -1, &position);
                         }
-                        else
+                        if (result)
                         {
-                            Ped fan = World.CreateRandomPed(position);
-                            fan.Task.StartScenario("WORLD_HUMAN_CHEERING", 0f);
-                            fans.Add(fan);
+                            if (Environment.TickCount >= lastPaparazzi + 10000)
+                            {
+                                Model pModel;
+                                pModel = new Model("a_m_m_paparazzi_01");
+                                pModel.Request();
+                                if (pModel.IsInCdImage && pModel.IsValid)
+                                {
+                                    while (!pModel.IsLoaded)
+                                        Wait(10);
+                                    Ped paparazzi = World.CreatePed(pModel, position);
+                                    pModel.MarkAsNoLongerNeeded();
+                                    paparazzi.Task.StartScenario("WORLD_HUMAN_PAPARAZZI", 0f);
+                                    fans.Add(paparazzi);
+                                }
+                                lastPaparazzi = Environment.TickCount;
+                            }
+                            else
+                            {
+                                Ped fan = World.CreateRandomPed(position);
+                                fan.Task.StartScenario("WORLD_HUMAN_CHEERING", 0f);
+                                fans.Add(fan);
+                            }
                         }
                     }
 
